@@ -1,0 +1,3 @@
+git+https://github.com/Farama-Foundation/d4rl@master#egg=d4rl
+git+https://github.com/ARISE-Initiative/robomimic@master#egg=robomimic
+git+https://github.com/ARISE-Initiative/robosuite@master#egg=robosuite
