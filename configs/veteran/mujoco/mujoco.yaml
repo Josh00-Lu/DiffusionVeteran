@@ -36,7 +36,7 @@ planner_predict_noise: True
 planner_next_obs_loss_weight: 1
 planner_ema_rate: 0.9999
 unet_dim: 32
-use_advantage_weighting: 1
+use_weighted_regression: 1
 weight_factor: 2
 
 ## Policy Config
@@ -50,7 +50,7 @@ policy_learning_rate: 0.0003
 critic_learning_rate: 0.0003
 
 # Training
-use_diffusion_policy: 1
+use_diffusion_invdyn: 1
 invdyn_gradient_steps: 200000
 policy_diffusion_gradient_steps: 1000000
 planner_diffusion_gradient_steps: 1000000

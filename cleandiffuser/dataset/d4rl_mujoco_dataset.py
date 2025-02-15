@@ -30,7 +30,7 @@ def modify_reward(dataset, max_episode_steps=1000):
     dataset["rewards"] *= max_episode_steps
     return dataset
 
-class D4RLMuJoCoSeqDataset(BaseDataset):
+class DV_D4RLMuJoCoSeqDataset(BaseDataset):
     """ **D4RL-MuJoCo Sequential Dataset**
 
     torch.utils.data.Dataset wrapper for D4RL-MuJoCo dataset.

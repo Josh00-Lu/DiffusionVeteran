@@ -6,7 +6,7 @@ import torch
 from cleandiffuser.dataset.base_dataset import BaseDataset
 from cleandiffuser.utils import GaussianNormalizer, dict_apply
 
-class D4RLMaze2DSeqDataset(BaseDataset):
+class DV_D4RLMaze2DSeqDataset(BaseDataset):
     """ **D4RL-Maze2D Sequential Dataset**
 
         torch.utils.data.Dataset wrapper for D4RL-Maze2D dataset.

@@ -91,7 +91,7 @@ class BaseDiffusionSDE(DiffusionModel):
     def add_noise(self, x0, t=None, eps=None):
         raise NotImplementedError
 
-    def loss(self, x0, condition=None, weighted_tensor=None):
+    def loss(self, x0, condition=None, **kwargs):
 
         xt, t, eps = self.add_noise(x0)
 
@@ -103,12 +103,15 @@ class BaseDiffusionSDE(DiffusionModel):
             loss = (self.model["diffusion"](xt, t, condition) - x0) ** 2
         
         loss = loss * self.loss_weight * (1 - self.fix_mask)
-        if weighted_tensor is not None:
-            loss *= weighted_tensor.unsqueeze(-1)
+        
+        # find weighted_regression_tensor in kwargs
+        weighted_regression_tensor = kwargs.get("weighted_regression_tensor", None)
+        if weighted_regression_tensor is not None:
+            loss *= weighted_regression_tensor.unsqueeze(-1)
 
         return loss.mean()
 
-    def update(self, x0, condition=None, update_ema=True, weighted_tensor=None, **kwargs):
+    def update(self, x0, condition=None, update_ema=True, **kwargs):
         """One-step gradient update.
         Inputs:
         - x0: torch.Tensor
@@ -122,7 +125,7 @@ class BaseDiffusionSDE(DiffusionModel):
         - log: dict
             The log dictionary.
         """
-        loss = self.loss(x0, condition, weighted_tensor=weighted_tensor)
+        loss = self.loss(x0, condition, **kwargs)
 
         loss.backward()
         grad_norm = nn.utils.clip_grad_norm_(self.model.parameters(), self.grad_clip_norm) \
@@ -194,19 +197,6 @@ class BaseDiffusionSDE(DiffusionModel):
             else:
                 pred = model["diffusion"](xt, t, condition)
                 pred_uncond = 0.
-            # if pred is None or pred_uncond is None:
-            #     b = xt.shape[0]
-            #     repeat_dim = [2 if i == 0 else 1 for i in range(xt.dim())]
-            #     condition = torch.cat([condition, torch.zeros_like(condition)], 0)
-            #     pred_all = model["diffusion"](
-            #         xt.repeat(*repeat_dim), t.repeat(2), condition)
-            #     pred, pred_uncond = pred_all[:b], pred_all[b:]
-
-        # w = torch.tensor(w, device=pred.device)
-        # num_dims = pred.dim()
-        # shape = [1] * num_dims
-        # shape[0] = -1  # 保持批量维度与 w 相同
-        # w = w.view(shape)
 
         if self.predict_noise or not self.predict_noise:
             bar_pred = w * pred + (1 - w) * pred_uncond
@@ -843,9 +833,9 @@ class ContinuousDiffusionSDE(BaseDiffusionSDE):
             xt = warm_start_reference * fwd_alpha + fwd_sigma * torch.randn_like(warm_start_reference)
         else:
             xt = torch.randn_like(prior) * temperature
-        
-        # if preserve_history:
-        #     log["sample_history"][:, 0] = xt.cpu().numpy()
+        xt = xt * (1. - self.fix_mask) + prior * self.fix_mask
+        if preserve_history:
+            log["sample_history"][:, 0] = xt.cpu().numpy()
 
         with torch.set_grad_enabled(requires_grad):
             condition_vec_cfg = model["condition"](condition_cfg, mask_cfg) if condition_cfg is not None else None
@@ -876,15 +866,10 @@ class ContinuousDiffusionSDE(BaseDiffusionSDE):
         stds[1:] = sigmas[:-1] / sigmas[1:] * (1 - (alphas[1:] / alphas[:-1]) ** 2).sqrt()
 
         buffer = []
-        
-        # with torch.no_grad():
-        #     noisy_prior = alphas[-1] * prior + sigmas[-1] * torch.randn_like(prior, device=self.device)
-        # xt = xt * (1. - self.fix_mask) + noisy_prior * self.fix_mask
-        xt = xt * (1. - self.fix_mask) + prior * self.fix_mask
 
         # ===================== Denoising Loop ========================
         loop_steps = [1] * diffusion_x_sampling_steps + list(range(1, sample_steps + 1))
-        for i in reversed(loop_steps): # [20, 19, 18, 17, ..., 1]
+        for i in reversed(loop_steps):
 
             t = torch.full((n_samples,), sample_step_schedule[i], dtype=torch.float32, device=self.device)
 
@@ -949,11 +934,7 @@ class ContinuousDiffusionSDE(BaseDiffusionSDE):
                           alphas[i - 1] * torch.expm1(-2 * hs[i]) * x_theta +
                           sigmas[i - 1] * (-torch.expm1(-2 * hs[i])).sqrt() * torch.randn_like(xt))
 
-            with torch.no_grad():
-                noisy_prior = alphas[i] * prior + sigmas[i] * torch.randn_like(prior, device=self.device)
-
             # fix the known portion, and preserve the sampling history
-            # xt = xt * (1. - self.fix_mask) + noisy_prior * self.fix_mask
             xt = xt * (1. - self.fix_mask) + prior * self.fix_mask
             if preserve_history:
                 log["sample_history"][:, sample_steps - i + 1] = xt.cpu().numpy()

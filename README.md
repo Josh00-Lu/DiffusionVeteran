@@ -6,6 +6,7 @@
 ·
 <a href="#">Code</a>
 ·
+<a href="https://openreview.net/forum?id=7BQkXXM8Fy">OpenReview</a>
 </p>
 
 This repository contains the PyTorch implementation of *"What Makes a Good Diffusion Planner for Decision Making?"* (ICLR 2025, Spotlight)
@@ -70,4 +71,17 @@ bash scripts_templates/template.sh
 This provides flexibility for trying different setups without needing to manually edit each script.
 
 # 🏷️ Acknowledgements
-This code is modified from the [Cleandiffuser](https://github.com/CleanDiffuserTeam/CleanDiffuser) repo. Please see the [license](LICENSE) for further details.
+This code is built upon [CleanDiffuser](https://github.com/CleanDiffuserTeam/CleanDiffuser), following their coding standards. You are welcome to conduct unified ablation studies or standardized comparisons with the baselines in CleanDiffuser. Please see the [license](LICENSE) for further details. 
+
+# 📝 Citation
+If you find our work useful in your research, please consider citing:
+```
+@inproceedings{
+lu2025what,
+title={What Makes a Good Diffusion Planner for Decision Making?},
+author={Haofei Lu and Dongqi Han and Yifei Shen and Dongsheng Li},
+booktitle={The Thirteenth International Conference on Learning Representations},
+year={2025},
+url={https://openreview.net/forum?id=7BQkXXM8Fy}
+}
+```

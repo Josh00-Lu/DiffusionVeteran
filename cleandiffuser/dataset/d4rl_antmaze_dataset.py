@@ -7,7 +7,7 @@ from cleandiffuser.dataset.base_dataset import BaseDataset
 from cleandiffuser.utils import GaussianNormalizer, dict_apply
 
 
-class D4RLAntmazeSeqDataset(BaseDataset):
+class DV_D4RLAntmazeSeqDataset(BaseDataset):
     """ **D4RL-Antmaze Sequential Dataset**
 
         torch.utils.data.Dataset wrapper for D4RL-Antmaze dataset.

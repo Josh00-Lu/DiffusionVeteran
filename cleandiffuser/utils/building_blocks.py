@@ -146,43 +146,7 @@ class DQLCritic(nn.Module):
         q1, q2 = self.forward(obs, act)
         return torch.min(q1, q2)
 
-class DACritic(nn.Module):
-    """ **Deep Q-Learning Critic.** A pytorch critic module for DQL. The module incorporates double Q trick.
-
-    Args:
-        obs_dim: int,
-            The dimension of the observation space.
-        hidden_dim: int,
-            The dimension of the hidden layers.
-    """
-
-    def __init__(self, obs_dim: int, hidden_dim: int = 256):
-        super().__init__()
-        self.q1_model = nn.Sequential(
-            nn.Linear(obs_dim + obs_dim, hidden_dim), nn.LayerNorm(hidden_dim), nn.Tanh(),
-            nn.Linear(hidden_dim, hidden_dim), nn.LayerNorm(hidden_dim), nn.Mish(),
-            nn.Linear(hidden_dim, hidden_dim), nn.LayerNorm(hidden_dim), nn.Mish(),
-            nn.Linear(hidden_dim, 1))
-
-        self.q2_model = nn.Sequential(
-            nn.Linear(obs_dim + obs_dim, hidden_dim), nn.LayerNorm(hidden_dim), nn.Tanh(),
-            nn.Linear(hidden_dim, hidden_dim), nn.LayerNorm(hidden_dim), nn.Mish(),
-            nn.Linear(hidden_dim, hidden_dim), nn.LayerNorm(hidden_dim), nn.Mish(),
-            nn.Linear(hidden_dim, 1))
-
-    def forward(self, obs, obs_next):
-        x = torch.cat([obs, obs_next], dim=-1)
-        return self.q1_model(x), self.q2_model(x)
-
-    def q1(self, obs, obs_next):
-        x = torch.cat([obs, obs_next], dim=-1)
-        return self.q1_model(x)
-
-    def q_min(self, obs, obs_next):
-        q1, q2 = self.forward(obs, obs_next)
-        return torch.min(q1, q2)
-
-class TransformerBlock(nn.Module):
+class DVTransformerBlock(nn.Module):
     def __init__(self, hidden_size: int, n_heads: int, dropout: float = 0.0, norm_type="post"):
         super().__init__()
         self.norm_type = norm_type
@@ -209,7 +173,7 @@ class TransformerBlock(nn.Module):
             raise NotImplementedError
         return x
     
-class DAHorizonCritic(nn.Module):
+class DVHorizonCritic(nn.Module):
     def __init__(
         self,
         in_dim: int,
@@ -229,7 +193,7 @@ class DAHorizonCritic(nn.Module):
         self.pos_emb = SinusoidalEmbedding(d_model)
         self.pos_emb_cache = None
 
-        self.blocks = nn.ModuleList([TransformerBlock(d_model, n_heads, dropout, norm_type) for _ in range(depth)])
+        self.blocks = nn.ModuleList([DVTransformerBlock(d_model, n_heads, dropout, norm_type) for _ in range(depth)])
         self.final_layer = nn.Linear(d_model, 1)
         self.initialize_weights()
 

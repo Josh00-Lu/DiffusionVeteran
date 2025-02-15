@@ -4,7 +4,7 @@ from .chiunet import ChiUNet1d
 from .dit import DiT1d
 from .dqlmlp import DQLMlp
 from .idqlmlp import IDQLMlp
-from .damlp import DAMlp, DAGoalMlp
+from .dvinvmlp import DVInvMlp
 from .jannerunet import JannerUNet1d
 from .mlp_sieve import MLPSieve
 from .pearcemlp import PearceMlp

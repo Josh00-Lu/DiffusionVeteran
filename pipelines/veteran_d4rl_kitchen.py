@@ -12,15 +12,15 @@ from torch.optim.lr_scheduler import CosineAnnealingLR
 from torch.utils.data import DataLoader
 
 from cleandiffuser.classifier import CumRewClassifier
-from cleandiffuser.dataset.d4rl_kitchen_dataset import D4RLKitchenSeqDataset
+from cleandiffuser.dataset.d4rl_kitchen_dataset import DV_D4RLKitchenSeqDataset
 from cleandiffuser.dataset.dataset_utils import loop_dataloader, loop_two_dataloaders
 from cleandiffuser.diffusion import ContinuousDiffusionSDE, DiscreteDiffusionSDE
 from cleandiffuser.invdynamic import MlpInvDynamic
 from cleandiffuser.nn_condition import MLPCondition, IdentityCondition
-from cleandiffuser.nn_diffusion import DiT1d, DAMlp
+from cleandiffuser.nn_diffusion import DiT1d, DVInvMlp
 from cleandiffuser.nn_classifier import HalfJannerUNet1d
 from cleandiffuser.nn_diffusion import JannerUNet1d
-from cleandiffuser.utils import report_parameters, DD_RETURN_SCALE, DAHorizonCritic
+from cleandiffuser.utils import report_parameters, DD_RETURN_SCALE, DVHorizonCritic
 from utils import set_seed
 from tqdm import tqdm
 from omegaconf import OmegaConf
@@ -62,7 +62,7 @@ def pipeline(args):
     
     # pipeline_type
     base_path += f"_{args.pipeline_type}"
-    base_path += f"_dp{args.use_diffusion_policy}"
+    base_path += f"_dp{args.use_diffusion_invdyn}"
     # task name
     base_path += f"/{args.task.env_name}/"
     
@@ -77,11 +77,11 @@ def pipeline(args):
 
     # ---------------------- Create Dataset ----------------------
     env = gym.make(args.task.env_name)
-    planner_dataset = D4RLKitchenSeqDataset(
+    planner_dataset = DV_D4RLKitchenSeqDataset(
         env.get_dataset(), horizon=args.task.planner_horizon, discount=args.discount, 
         stride=args.task.stride, center_mapping=(args.guidance_type!="cfg")
     )
-    policy_dataset = D4RLKitchenSeqDataset(
+    policy_dataset = DV_D4RLKitchenSeqDataset(
         env.get_dataset(), horizon=args.task.planner_horizon, discount=args.discount, 
         stride=args.task.stride, center_mapping=(args.guidance_type!="cfg")
     )
@@ -110,7 +110,7 @@ def pipeline(args):
         
     if args.guidance_type == "MCSS":
         # --------------- Horizon Critic -----------------
-        critic = DAHorizonCritic(
+        critic = DVHorizonCritic(
             planner_dim, emb_dim=args.planner_emb_dim,
             d_model=args.planner_d_model, n_heads=args.planner_d_model//64, depth=2, norm_type="pre").to(args.device)
         critic_optim = torch.optim.Adam(critic.parameters(), lr=args.critic_learning_rate)
@@ -154,15 +154,15 @@ def pipeline(args):
 
     # --------------- Inverse Dynamic (Policy) -------------------
     if args.pipeline_type=="separate":
-        if args.use_diffusion_policy:
-            nn_diffusion_policy = DAMlp(obs_dim, act_dim, emb_dim=64, hidden_dim=args.policy_hidden_dim, timestep_emb_type="positional").to(args.device)
-            nn_condition_policy = IdentityCondition(dropout=0.0).to(args.device)
+        if args.use_diffusion_invdyn:
+            nn_diffusion_invdyn = DVInvMlp(obs_dim, act_dim, emb_dim=64, hidden_dim=args.policy_hidden_dim, timestep_emb_type="positional").to(args.device)
+            nn_condition_invdyn = IdentityCondition(dropout=0.0).to(args.device)
             print(f"=============== Parameter Report of Policy ===================================")
-            report_parameters(nn_diffusion_policy)
+            report_parameters(nn_diffusion_invdyn)
             print(f"==============================================================================")
             # --------------- Diffusion Model Actor --------------------
             policy = DiscreteDiffusionSDE(
-                nn_diffusion_policy, nn_condition_policy, predict_noise=args.policy_predict_noise, optim_params={"lr": args.policy_learning_rate},
+                nn_diffusion_invdyn, nn_condition_invdyn, predict_noise=args.policy_predict_noise, optim_params={"lr": args.policy_learning_rate},
                 x_max=+1. * torch.ones((1, act_dim), device=args.device),
                 x_min=-1. * torch.ones((1, act_dim), device=args.device),
                 diffusion_steps=args.policy_diffusion_steps, ema_rate=args.policy_ema_rate, device=args.device)
@@ -185,7 +185,7 @@ def pipeline(args):
         
         # Policy
         if args.pipeline_type=="separate":
-            if args.use_diffusion_policy:
+            if args.use_diffusion_invdyn:
                 policy_lr_scheduler = CosineAnnealingLR(policy.optimizer, args.policy_diffusion_gradient_steps)
                 policy.train()
             else:
@@ -242,7 +242,7 @@ def pipeline(args):
                     classifier_lr_scheduler.step()
             
             if args.pipeline_type == "separate":
-                if args.use_diffusion_policy:
+                if args.use_diffusion_invdyn:
                     # ----------- Policy Gradient Step ------------
                     if n_gradient_step <= args.policy_diffusion_gradient_steps:
                         log["bc_loss_policy"] += policy.update(policy_td_act, torch.cat([policy_td_obs, policy_td_next_obs], dim=-1))['loss']
@@ -284,7 +284,7 @@ def pipeline(args):
                     planner.classifier.save(save_path + f"classifier_ckpt_latest.pt")
                 
                 if args.pipeline_type == "separate":
-                    if args.use_diffusion_policy:
+                    if args.use_diffusion_invdyn:
                         policy.save(save_path + f"policy_ckpt_{n_gradient_step + 1}.pt")
                         policy.save(save_path + f"policy_ckpt_latest.pt")
                     else:
@@ -308,7 +308,7 @@ def pipeline(args):
             critic.eval()
             # load policy
             if args.pipeline_type == "separate":
-                if args.use_diffusion_policy:
+                if args.use_diffusion_invdyn:
                     policy.load(save_path + f"policy_ckpt_{args.policy_ckpt}.pt")
                     policy.eval()
                 else:
@@ -321,7 +321,7 @@ def pipeline(args):
             planner.eval()
             # load policy
             if args.pipeline_type == "separate":
-                if args.use_diffusion_policy:
+                if args.use_diffusion_invdyn:
                     policy.load(save_path + f"policy_ckpt_{args.policy_ckpt}.pt")
                     policy.eval()
                 else:
@@ -336,7 +336,7 @@ def pipeline(args):
             planner.eval()
             # load policy
             if args.pipeline_type == "separate":
-                if args.use_diffusion_policy:
+                if args.use_diffusion_invdyn:
                     policy.load(save_path + f"policy_ckpt_{args.policy_ckpt}.pt")
                     policy.eval()
                 else:
@@ -407,7 +407,7 @@ def pipeline(args):
 
                 # 2) generate action
                 if args.pipeline_type == "separate":
-                    if args.use_diffusion_policy:
+                    if args.use_diffusion_invdyn:
                         policy_prior = torch.zeros((args.num_envs, act_dim), device=args.device)
                         with torch.no_grad():
                             next_obs_plan = traj[:, 1, :]
