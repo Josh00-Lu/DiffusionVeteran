@@ -75,7 +75,7 @@ class IQL(nn.Module):
         self.optimV.zero_grad()
         loss.backward()
         self.optimV.step()
-        return loss.item(), q.mean().item(), v.mean().item()
+        return loss.item()
 
     def update_Q(self, obs, act, rew, obs_next, done):
         with torch.no_grad():

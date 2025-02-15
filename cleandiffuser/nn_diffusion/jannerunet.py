@@ -163,12 +163,16 @@ class JannerUNet1d(BaseNNDiffusion):
         Output:
             y:          (b, horizon, in_dim)
         """
+        # check horizon dimension
+        assert x.shape[1] & (x.shape[1] - 1) == 0, "Ta dimension must be 2^n"
 
         x = x.permute(0, 2, 1)
 
         emb = self.map_noise(noise)
         if condition is not None:
             emb = emb + condition
+        else:
+            emb = emb + torch.zeros_like(emb)
         emb = self.map_emb(emb)
 
         h = []

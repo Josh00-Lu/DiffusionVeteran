@@ -23,18 +23,22 @@ class MlpNNDiffusion(BaseNNDiffusion):
 
     def forward(self,
                 x: torch.Tensor, noise: torch.Tensor,
-                condition: torch.Tensor = None):
+                condition: Optional[torch.Tensor] = None):
         """
         Input:
-            x:          (b, act_dim)
+            x:          (b, x_dim)
             noise:      (b, )
-            condition:  (b, obs_dim)
+            condition:  (b, emd_dim)
 
         Output:
-            y:          (b, act_dim)
+            y:          (b, x_dim)
         """
         t = self.map_noise(noise)
         if condition is not None:
             t += condition
+        else:
+            t += torch.zeros_like(t)
         return self.mlp(torch.cat([x, t], -1))
+
+
         

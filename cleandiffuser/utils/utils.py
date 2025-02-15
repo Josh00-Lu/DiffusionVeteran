@@ -120,8 +120,7 @@ def inverse_linear_noise_schedule(
 
 
 def cosine_noise_schedule(t_diffusion: torch.Tensor, s: float = 0.008):
-    t_diffusion[-1] = 0.9946
-    alpha = (np.pi / 2.0 * (t_diffusion + s) / (1 + s)).cos() / np.cos(
+    alpha = (np.pi / 2.0 * ((t_diffusion).clip(0., 0.9946) + s) / (1 + s)).cos() / np.cos(
         np.pi / 2.0 * s / (1 + s))
     sigma = (1.0 - alpha**2).sqrt()
     return alpha, sigma
@@ -378,20 +377,17 @@ def report_parameters(model, topk=10):
 
 # discount = 0.997
 DD_RETURN_SCALE = {
-    ## mujoco
     "halfcheetah-medium-expert-v2": 3600,
-    "hopper-medium-expert-v2": 1200,
-    "walker2d-medium-expert-v2": 1600,
-    "halfcheetah-medium-v2": 1700,
-    "hopper-medium-v2": 1000,
-    "walker2d-medium-v2": 1300,
     "halfcheetah-medium-replay-v2": 1600,
+    "halfcheetah-medium-v2": 1700,
+    "hopper-medium-expert-v2": 1200,
     "hopper-medium-replay-v2": 1000,
+    "hopper-medium-v2": 1000,
+    "walker2d-medium-expert-v2": 1600,
     "walker2d-medium-replay-v2": 1300,
-    # kitchen
+    "walker2d-medium-v2": 1300,
     "kitchen-partial-v0": 470,
     "kitchen-mixed-v0": 400,
-    # antmaze
     "antmaze-medium-play-v2": 100,
     "antmaze-medium-diverse-v2": 100,
     "antmaze-large-play-v2": 100,
