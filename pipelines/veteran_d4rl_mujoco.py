@@ -23,8 +23,6 @@ from cleandiffuser.utils import report_parameters, DD_RETURN_SCALE, DVHorizonCri
 from utils import set_seed
 from tqdm import tqdm
 from omegaconf import OmegaConf
-from cleandiffuser.utils.iql import IQL
-
 
 
 @hydra.main(config_path="../configs/veteran/mujoco", config_name="mujoco", version_base=None)
@@ -353,8 +351,8 @@ def pipeline(args):
                 log = dict.fromkeys(["loss_v", "v_mean"], 0.)
 
             if (n_gradient_step + 1) % args.save_interval == 0:
-                torch.save({"iql_v": EV.state_dict()}, save_path + f"EV_ckpt_{n_gradient_step + 1}.pt")
-                torch.save({"iql_v": EV.state_dict()}, save_path + f"EV_ckpt_latest.pt")
+                torch.save({"ev": EV.state_dict()}, save_path + f"EV_ckpt_{n_gradient_step + 1}.pt")
+                torch.save({"ev": EV.state_dict()}, save_path + f"EV_ckpt_latest.pt")
 
             n_gradient_step += 1
             if n_gradient_step > 1_000_000:
@@ -413,7 +411,7 @@ def pipeline(args):
         
         EV = IDQLVNet(obs_dim, hidden_dim=256).to(args.device)
         ev_ckpt = torch.load(save_path + f"EV_ckpt_{MAX_VALUE_STEPS}.pt")
-        EV.load_state_dict(ev_ckpt["iql_v"])
+        EV.load_state_dict(ev_ckpt["ev"])
         EV.eval()
 
         env_eval = gym.vector.make(args.task.env_name, args.num_envs)
