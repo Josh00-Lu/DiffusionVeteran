@@ -71,7 +71,7 @@ bash scripts_templates/template.sh
 This provides flexibility for trying different setups without needing to manually edit each script.
 
 ## 🙏 Acknowledgements
-🎉 Currently, Diffusion-Vetern is offically supported by [CleanDiffuser](https://github.com/CleanDiffuserTeam/CleanDiffuser). You are also welcomed to conduct unified ablation studies or standardized comparisons with the baselines in CleanDiffuser. Please see the [license](LICENSE) for further details. 
+🎉 Currently, Diffusion-Veteran is offically supported by [CleanDiffuser](https://github.com/CleanDiffuserTeam/CleanDiffuser). You are also welcomed to conduct unified ablation studies or standardized comparisons with the baselines in CleanDiffuser. Please see the [license](LICENSE) for further details. 
 
 ## 📚 Citation
 If you find our work useful in your research, please consider citing:
