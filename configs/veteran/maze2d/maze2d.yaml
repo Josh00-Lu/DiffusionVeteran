@@ -11,6 +11,7 @@ project: Default
 group: release
 name: Default
 enable_wandb: true
+save_dir: results
 
 # Guidance
 guidance_type: MCSS # cfg, cg, MCSS

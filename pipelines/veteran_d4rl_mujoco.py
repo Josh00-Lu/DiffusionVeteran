@@ -69,7 +69,7 @@ def pipeline(args):
     # task name
     base_path += f"/{args.task.env_name}/"
     
-    save_path = "results/" + base_path
+    save_path = f"{args.save_dir}/" + base_path
     video_path = "video_outputs/" + base_path
     
     if os.path.exists(save_path) is False:
